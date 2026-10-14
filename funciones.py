@@ -21,7 +21,7 @@ def calibrar_imagen(ruta_imagen, distancia_real_mm):
     x2, y2 = puntos[1]
 
     # Calcular distancia entre los puntos en pixeles
-    distancia_px = math.sqrt((x2 - x1)*2 + (y2 - y1)*2)
+    distancia_px = math.sqrt((x2 - x1)**2 + (y2 - y1)**2)
 
     # Calibracion
     px_por_mm = distancia_px / distancia_real_mm
@@ -61,6 +61,26 @@ def rotar_sin_recortar(imagen, angulo, border_value):
         imagen,
         M,
         (nuevo_w, nuevo_h),
+        borderValue=border_value
+    )
+
+    return rotada, M
+
+def rotar_mismo_tamanio(imagen, angulo, border_value):
+    h, w = imagen.shape[:2]
+
+    centro = (w / 2, h / 2)
+
+    M = cv2.getRotationMatrix2D(
+        centro,
+        angulo,
+        1.0
+    )
+
+    rotada = cv2.warpAffine(
+        imagen,
+        M,
+        (w, h),
         borderValue=border_value
     )
 
