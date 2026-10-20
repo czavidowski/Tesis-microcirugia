@@ -366,7 +366,7 @@ def mostrar_rois(resultados):
 # 8. MAIN
 # ==========================================================
 
-imagen = cv2.imread("imagen3.jpg")
+imagen = cv2.imread("imagenes/imagen3.jpg")
 
 if imagen is None:
     raise FileNotFoundError("No se pudo cargar imagen3.jpg")
