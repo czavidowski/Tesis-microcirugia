@@ -25,15 +25,33 @@ for ruta_imagen in rutas_imagenes:
         print(f"No se pudo cargar: {ruta_imagen}")
         continue
 
+    mascara_inicial = segmentar_hilo(imagen)
     # ---------------------------------------------
-    # SEGMENTACIÓN
+    # ORIENTACIÓN POR HOTELLING
     # ---------------------------------------------
-    mascara_hilo = segmentar_hilo(imagen)
-
+    angulo_rotacion = procesamiento.calcular_angulo_hotelling(
+        mascara_inicial
+    )
+    # ---------------------------------------------
+    # ROTAR IMAGEN
+    # ---------------------------------------------
+    imagen_rotada, M = procesamiento.rotar_sin_recortar(
+        imagen,
+        angulo_rotacion,
+        (255, 255, 255)
+    )
+    # ---------------------------------------------
+    # VOLVER A SEGMENTAR LA IMAGEN ROTADA
+    # ---------------------------------------------
+    mascara_hilo = segmentar_hilo(
+        imagen_rotada
+    )
     # ---------------------------------------------
     # DETECCIÓN DE NUDOS
     # ---------------------------------------------
-    resultado = detectar_nudos(mascara_hilo)
+    resultado = detectar_nudos(
+        mascara_hilo
+    )
 
     cantidad_nudos = len(resultado["nudos"])
 
@@ -43,11 +61,6 @@ for ruta_imagen in rutas_imagenes:
     centroides = procesamiento.obtener_centroides(
         resultado["nudos"]
     )
-
-    centroides = procesamiento.obtener_centroides(
-        resultado["nudos"]
-    )
-
     # ---------------------------------------------
     # CALCULAR TORTUOSIDAD
     # ---------------------------------------------
@@ -55,7 +68,7 @@ for ruta_imagen in rutas_imagenes:
 
         tortuosidad_pca = calcular_tortuosidad(centroides)
         print(f"Tortuosidad PCA: {tortuosidad_pca:.4f}")
-        mostrar_tortuosidad(imagen, centroides, Path(ruta_imagen).name)
+        mostrar_tortuosidad(imagen_rotada, centroides, Path(ruta_imagen).name)
 
     else:
         print("No hay suficientes nudos para calcular tortuosidad")
@@ -71,7 +84,7 @@ for ruta_imagen in rutas_imagenes:
     # MOSTRAR RESULTADO FINAL
     # ---------------------------------------------
     mostrar_nudos_finales(
-        imagen,
+        imagen_rotada,
         resultado["labels_cand"],
         resultado["candidatos"],
         resultado["nudos"],

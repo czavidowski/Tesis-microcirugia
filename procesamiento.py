@@ -72,3 +72,44 @@ def obtener_centroides(nudos):
         centroides.append(nudo["centroide"])
 
     return centroides
+def calcular_angulo_hotelling(mascara):
+
+    # Coordenadas de todos los píxeles del hilo
+    y, x = np.where(mascara > 0)
+
+    if len(x) < 2:
+        raise ValueError("No hay suficientes píxeles para calcular la orientación")
+
+    puntos = np.column_stack((x, y)).astype(float)
+
+    # Centrar los puntos
+    media = np.mean(puntos, axis=0)
+    puntos_centrados = puntos - media
+
+    # Matriz de covarianza
+    cov = np.cov(puntos_centrados.T)
+
+    # Autovalores y autovectores
+    autovalores, autovectores = np.linalg.eigh(cov)
+
+    # Dirección principal = autovector del mayor autovalor
+    direccion_principal = autovectores[
+        :,
+        np.argmax(autovalores)
+    ]
+
+    vx, vy = direccion_principal
+
+    # Ángulo de la dirección principal
+    angulo = np.degrees(
+        np.arctan2(vy, vx)
+    )
+
+    # El autovector puede apuntar para cualquiera de los dos lados.
+    # Lo normalizamos entre 0 y 180°.
+    angulo = angulo % 180
+
+    # Queremos que la sutura quede vertical (90°)
+    angulo_rotacion = angulo - 90
+
+    return angulo_rotacion
