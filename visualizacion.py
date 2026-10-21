@@ -331,22 +331,55 @@ def imprimir_resultados(resultado):
 # =========================================================
 import cv2
 
-def dibujar_linea_extremos(imagen, centroides, color_linea=(0, 255, 0), grosor=2):
+
+def dibujar_linea_extremos(imagen, centroides):
 
     imagen_resultado = imagen.copy()
 
     if len(centroides) < 2:
         return imagen_resultado
 
-    # Primer y último punto
-    punto_inicial = tuple(map(int, centroides[0]))
-    punto_final = tuple(map(int, centroides[-1]))
+    # Convertir centroides a coordenadas enteras
+    puntos = [tuple(map(int, c)) for c in centroides]
 
-    # Dibujar línea
-    cv2.line(imagen_resultado, punto_inicial, punto_final, color_linea, grosor)
+    # ---------------------------------------------
+    # DISTANCIA ENTRE EXTREMOS (VERDE)
+    # ---------------------------------------------
+    punto_inicial = puntos[0]
+    punto_final = puntos[-1]
 
-    # Dibujar extremos
-    cv2.circle(imagen_resultado, punto_inicial, 5, (0, 0, 255), -1)  # rojo
-    cv2.circle(imagen_resultado, punto_final, 5, (255, 0, 0), -1)    # azul
+    cv2.line(
+        imagen_resultado,
+        punto_inicial,
+        punto_final,
+        (0, 255, 0),
+        2
+    )
+
+    # ---------------------------------------------
+    # DISTANCIA POLIGONAL (AZUL)
+    # ---------------------------------------------
+    for i in range(len(puntos) - 1):
+
+        cv2.line(
+            imagen_resultado,
+            puntos[i],
+            puntos[i + 1],
+            (255, 0, 0),
+            2
+        )
+
+    # ---------------------------------------------
+    # DIBUJAR CENTROIDES (ROJO)
+    # ---------------------------------------------
+    for punto in puntos:
+
+        cv2.circle(
+            imagen_resultado,
+            punto,
+            5,
+            (0, 0, 255),
+            -1
+        )
 
     return imagen_resultado

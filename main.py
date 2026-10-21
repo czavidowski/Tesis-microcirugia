@@ -1,14 +1,12 @@
 
-
 import cv2
 from pathlib import Path
-
 import procesamiento
 from io_imagenes import obtener_imagenes
 from segmentacion import segmentar_hilo
 from deteccion_nudos import detectar_nudos
 from visualizacion import mostrar_nudos_finales, dibujar_linea_extremos
-from tortuosidad import distancia_extremos
+from distancia import distancia_extremos,distancia_poligonal, calcular_tortuosidad
 
 # =========================================================
 # CARGAR TODAS LAS IMÁGENES
@@ -85,6 +83,30 @@ for ruta_imagen in rutas_imagenes:
         centroides,
         mm_por_px
     )
+    # ---------------------------------------------
+    # DISTANCIA POLIGONAL
+    # ---------------------------------------------
+    distancia_poligonal_mm = distancia_poligonal(
+        centroides,
+        mm_por_px
+    )
+    if distancia_poligonal_mm is not None:
+        print(f"Distancia poligonal: {distancia_poligonal_mm:.2f} mm")
+    else:
+        print("No se detectaron exactamente 5 nudos")
+
+    # ---------------------------------------------
+    # CALCULAR TORTUOSIDAD
+    # ---------------------------------------------
+    tortuosidad = calcular_tortuosidad(
+        distancia_poligonal_mm,
+        distancia_mm
+    )
+
+    if tortuosidad is not None:
+        print(f"Tortuosidad: {tortuosidad:.4f}")
+    else:
+        print("No se pudo calcular la tortuosidad")
 
     # ---------------------------------------------
     # NOMBRE DE LA IMAGEN
@@ -116,5 +138,4 @@ for ruta_imagen in rutas_imagenes:
         resultado["nudos"],
         nombre_imagen
     )
-
 
