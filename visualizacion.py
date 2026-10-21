@@ -331,6 +331,11 @@ def imprimir_resultados(resultado):
 # =========================================================
 import cv2
 
+# =========================================================
+# VISUALIZAR linea recta
+# =========================================================
+import cv2
+
 def dibujar_linea_extremos(imagen, centroides, color_linea=(0, 255, 0), grosor=2):
 
     imagen_resultado = imagen.copy()
@@ -350,3 +355,103 @@ def dibujar_linea_extremos(imagen, centroides, color_linea=(0, 255, 0), grosor=2
     cv2.circle(imagen_resultado, punto_final, 5, (255, 0, 0), -1)    # azul
 
     return imagen_resultado
+
+def mostrar_nudos_rotados(
+    imagen_rotada,
+    labels_cand,
+    candidatos,
+    nudos,
+    M,
+    nombre_imagen=""
+):
+
+    imagen_rgb = cv2.cvtColor(
+        imagen_rotada,
+        cv2.COLOR_BGR2RGB
+    )
+
+    alto_rotado, ancho_rotado = imagen_rotada.shape[:2]
+
+    # Candidatos que quedaron como representantes
+    # de los nudos finales
+    representantes = {
+        nudo["rep"]
+        for nudo in nudos
+    }
+
+    # -----------------------------------------------------
+    # ROTAR LAS MÁSCARAS DE LOS NUDOS YA DETECTADOS
+    # -----------------------------------------------------
+
+    for candidato in candidatos:
+
+        if candidato["id"] not in representantes:
+            continue
+
+        # Máscara del candidato en la imagen ORIGINAL
+        mascara_candidato = np.where(
+            labels_cand == candidato["label"],
+            255,
+            0
+        ).astype(np.uint8)
+
+        # Llevar esa máscara a la imagen rotada
+        mascara_rotada = cv2.warpAffine(
+            mascara_candidato,
+            M,
+            (ancho_rotado, alto_rotado),
+            flags=cv2.INTER_NEAREST,
+            borderValue=0
+        )
+
+        dibujar_contorno(
+            imagen_rgb,
+            mascara_rotada,
+            (0, 200, 0),
+            3
+        )
+
+    # -----------------------------------------------------
+    # MOSTRAR
+    # -----------------------------------------------------
+
+    plt.figure(
+        num=nombre_imagen,
+        figsize=(10, 7)
+    )
+
+    plt.imshow(imagen_rgb)
+
+    # Números y centroides ya transformados
+    for numero, nudo in enumerate(
+        nudos,
+        start=1
+    ):
+
+        x, y = nudo["centroide_rotado"]
+
+        plt.plot(
+            x,
+            y,
+            "y+",
+            markersize=14,
+            mew=2
+        )
+
+        plt.text(
+            x,
+            y - 25,
+            str(numero),
+            color="yellow",
+            fontsize=14,
+            ha="center",
+            weight="bold"
+        )
+
+    plt.title(
+        f"{nombre_imagen} - Nudos detectados: {len(nudos)}"
+    )
+
+    plt.axis("off")
+    plt.tight_layout()
+    plt.show()
