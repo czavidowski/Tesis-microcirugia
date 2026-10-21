@@ -44,8 +44,9 @@ for ruta_imagen in rutas_imagenes:
         resultado["nudos"]
     )
 
-    # Ordenar de arriba hacia abajo
-    centroides = sorted(centroides, key=lambda p: p[1])
+    centroides = procesamiento.obtener_centroides(
+        resultado["nudos"]
+    )
 
     # ---------------------------------------------
     # CALCULAR TORTUOSIDAD

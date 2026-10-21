@@ -1,131 +1,95 @@
 import cv2
 import numpy as np
-
 # =========================================================
 # PARÁMETROS
 # =========================================================
-
 TAM_KERNEL_NUDOS = 15
-
 # Por ahora no eliminamos componentes chicas automáticamente
 FRACCION_RUIDO = 0
-
 # Fusionar si la brecha geodésica es menor o igual
 # al diámetro típico de los candidatos
 FACTOR_FUSION = 1.0
-
 # Máximo recorrido a explorar para la distancia geodésica
 TOPE_MEDICION = 10
-
-
-# =========================================================
+# ========================================================
 # PASO 1
 # SEPARAR COMPONENTES CONEXAS DEL HILO ORIGINAL
 # =========================================================
-
 def separar_hilos(mascara):
-
     n, labels, stats, _ = cv2.connectedComponentsWithStats(
         mascara,
         connectivity=8
     )
-
     if n <= 1:
         return mascara, labels, stats
-
     areas = stats[1:, cv2.CC_STAT_AREA]
-
     if FRACCION_RUIDO > 0:
         area_min = FRACCION_RUIDO * areas.max()
     else:
         area_min = 0
-
     mascara_limpia = np.zeros_like(mascara)
-
     for i in range(1, n):
-
         area = stats[i, cv2.CC_STAT_AREA]
-
         if area >= area_min:
             mascara_limpia[labels == i] = 255
-
     n, labels, stats, _ = cv2.connectedComponentsWithStats(
         mascara_limpia,
         connectivity=8
     )
-
     return mascara_limpia, labels, stats
-
-
 # =========================================================
 # PASO 2
 # GENERAR CANDIDATOS A NUDO
 # =========================================================
-
 def detectar_candidatos(mascara, labels_hilo):
-
     kernel = cv2.getStructuringElement(
         cv2.MORPH_ELLIPSE,
         (TAM_KERNEL_NUDOS, TAM_KERNEL_NUDOS)
     )
-
     mascara_nudos = cv2.morphologyEx(
         mascara,
         cv2.MORPH_OPEN,
         kernel
     )
-
     n, labels, stats, centroids = cv2.connectedComponentsWithStats(
         mascara_nudos,
         connectivity=8
     )
-
     candidatos = []
-
     for i in range(1, n):
-
         area = int(
             stats[i, cv2.CC_STAT_AREA]
         )
-
         ys, xs = np.nonzero(
             labels == i
         )
-
         if len(xs) == 0:
             continue
-
         # Buscar a qué componente del hilo original pertenece
         labels_coincidentes = labels_hilo[
             ys,
             xs
         ]
-
         labels_coincidentes = labels_coincidentes[
             labels_coincidentes > 0
         ]
-
         if len(labels_coincidentes) == 0:
             continue
-
         valores, cantidades = np.unique(
             labels_coincidentes,
             return_counts=True
         )
-
         hilo = int(
             valores[
                 np.argmax(cantidades)
             ]
         )
-
         # Diámetro equivalente del candidato
         diametro = float(
             np.sqrt(
                 4 * area / np.pi
             )
         )
-
         candidatos.append(
             {
                 "id": len(candidatos),
@@ -139,72 +103,54 @@ def detectar_candidatos(mascara, labels_hilo):
                 "hilo": hilo
             }
         )
-
     return mascara_nudos, labels, candidatos
-
-
 # =========================================================
 # PASO 3
 # DISTANCIA GEODÉSICA ENTRE DOS CANDIDATOS
 # =========================================================
-
 def brecha_geodesica(
     hilo_roi,
     candidato_a,
     candidato_b,
     tope
 ):
-
     kernel = np.ones(
         (3, 3),
         dtype=np.uint8
     )
-
     frente = candidato_a.copy()
-
     for paso in range(
         1,
         tope + 1
     ):
-
         dilatado = cv2.dilate(
             frente,
             kernel
         )
-
         # Solo se puede avanzar por dentro del hilo
         nuevo = cv2.bitwise_and(
             dilatado,
             hilo_roi
         )
-
         # Ver si ya tocamos al otro candidato
         contacto = cv2.bitwise_and(
             nuevo,
             candidato_b
         )
-
         if cv2.countNonZero(contacto) > 0:
             return paso
-
         crecimiento = cv2.subtract(
             nuevo,
             frente
         )
-
         if cv2.countNonZero(crecimiento) == 0:
             return None
-
         frente = nuevo
-
     return None
-
-
 # =========================================================
 # PASO 4
 # MEDIR BRECHAS ENTRE CANDIDATOS DEL MISMO HILO
 # =========================================================
-
 def medir_brechas(
     candidatos,
     labels_cand,
@@ -212,52 +158,39 @@ def medir_brechas(
     stats_hilo,
     tope
 ):
-
     por_hilo = {}
-
     for candidato in candidatos:
-
         hilo = candidato["hilo"]
-
         por_hilo.setdefault(
             hilo,
             []
         ).append(
             candidato
         )
-
     brechas = {}
-
     for hilo, lista in por_hilo.items():
-
         if len(lista) < 2:
             continue
-
         x = stats_hilo[
             hilo,
             cv2.CC_STAT_LEFT
         ]
-
         y = stats_hilo[
             hilo,
             cv2.CC_STAT_TOP
         ]
-
         w = stats_hilo[
             hilo,
             cv2.CC_STAT_WIDTH
         ]
-
         h = stats_hilo[
             hilo,
             cv2.CC_STAT_HEIGHT
         ]
-
         sl = (
             slice(y, y + h),
             slice(x, x + w)
         )
-
         hilo_roi = np.where(
             labels_hilo[sl] == hilo,
             255,
@@ -265,19 +198,15 @@ def medir_brechas(
         ).astype(
             np.uint8
         )
-
         for i in range(
             len(lista)
         ):
-
             for j in range(
                 i + 1,
                 len(lista)
             ):
-
                 candidato_a = lista[i]
                 candidato_b = lista[j]
-
                 mascara_a = np.where(
                     labels_cand[sl]
                     == candidato_a["label"],
@@ -286,7 +215,6 @@ def medir_brechas(
                 ).astype(
                     np.uint8
                 )
-
                 mascara_b = np.where(
                     labels_cand[sl]
                     == candidato_b["label"],
@@ -295,29 +223,23 @@ def medir_brechas(
                 ).astype(
                     np.uint8
                 )
-
                 distancia = brecha_geodesica(
                     hilo_roi,
                     mascara_a,
                     mascara_b,
                     tope
                 )
-
                 brechas[
                     (
                         candidato_a["id"],
                         candidato_b["id"]
                     )
                 ] = distancia
-
     return brechas
-
-
 # =========================================================
 # PASO 5
 # AGRUPAR CANDIDATOS MUY CERCANOS
 # =========================================================
-
 def agrupar_candidatos(
     candidatos,
     brechas,
@@ -391,6 +313,70 @@ def agrupar_candidatos(
                 ]
             }
         )
+    # =====================================================
+    # ORDENAR LOS NUDOS SEGÚN LA DIRECCIÓN DE LA SUTURA
+    # =====================================================
+
+    if len(nudos) >= 2:
+
+        puntos = np.array(
+            [nudo["centroide"] for nudo in nudos],
+            dtype=float
+        )
+
+        # Centro medio
+        media = np.mean(
+            puntos,
+            axis=0
+        )
+
+        puntos_centrados = (
+                puntos - media
+        )
+
+        # PCA / Hotelling
+        cov = np.cov(
+            puntos_centrados.T
+        )
+
+        autovalores, autovectores = np.linalg.eigh(
+            cov
+        )
+
+        direccion_principal = autovectores[
+                              :,
+                              np.argmax(autovalores)
+                              ]
+
+        # Elegir un sentido consistente:
+        # izquierda -> derecha si predomina horizontal
+        # arriba -> abajo si predomina vertical
+
+        if abs(direccion_principal[0]) >= abs(direccion_principal[1]):
+
+            # Predomina horizontal
+            if direccion_principal[0] < 0:
+                direccion_principal = -direccion_principal
+
+        else:
+
+            # Predomina vertical
+            if direccion_principal[1] < 0:
+                direccion_principal = -direccion_principal
+
+        # Proyección de cada nudo sobre el eje principal
+        proyecciones = (
+                puntos_centrados @ direccion_principal
+        )
+
+        orden = np.argsort(
+            proyecciones
+        )
+
+        nudos = [
+            nudos[i]
+            for i in orden
+        ]
 
     return nudos
 
