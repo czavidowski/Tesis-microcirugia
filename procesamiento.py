@@ -117,3 +117,20 @@ def calcular_angulo_hotelling(mascara):
     angulo_rotacion = angulo - 90
 
     return angulo_rotacion
+def transformar_punto(punto, M):
+
+    x, y = punto
+
+    nuevo_x = (
+        M[0, 0] * x +
+        M[0, 1] * y +
+        M[0, 2]
+    )
+
+    nuevo_y = (
+        M[1, 0] * x +
+        M[1, 1] * y +
+        M[1, 2]
+    )
+
+    return float(nuevo_x), float(nuevo_y)
