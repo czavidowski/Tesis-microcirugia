@@ -52,12 +52,9 @@ for ruta_imagen in rutas_imagenes:
     # ---------------------------------------------
     if len(centroides) >= 2:
 
-        tortuosidad_extremos, tortuosidad_pca = calcular_tortuosidad(
-            centroides
-        )
-        mostrar_tortuosidad(imagen, centroides, Path(ruta_imagen).name)
-        print(f"Tortuosidad extremos: {tortuosidad_extremos:.4f}")
+        tortuosidad_pca = calcular_tortuosidad(centroides)
         print(f"Tortuosidad PCA: {tortuosidad_pca:.4f}")
+        mostrar_tortuosidad(imagen, centroides, Path(ruta_imagen).name)
 
     else:
         print("No hay suficientes nudos para calcular tortuosidad")
