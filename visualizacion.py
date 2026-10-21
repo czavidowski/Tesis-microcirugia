@@ -179,19 +179,17 @@ def mostrar_nudos_finales(
     imagen_bgr,
     labels_cand,
     candidatos,
-    nudos
+    nudos,
+    nombre_imagen=""
 ):
     vis = cv2.cvtColor(
         imagen_bgr,
         cv2.COLOR_BGR2RGB
     )
-    # IDs de los candidatos que quedaron
-    # como representantes de los nudos finales
     representantes = {
         nudo["rep"]
         for nudo in nudos
     }
-    # Dibujar solamente los candidatos finales
     for candidato in candidatos:
         if candidato["id"] not in representantes:
             continue
@@ -207,12 +205,10 @@ def mostrar_nudos_finales(
             3
         )
     plt.figure(
+        num=nombre_imagen,
         figsize=(10, 7)
     )
-    plt.imshow(
-        vis
-    )
-    # Numerar los nudos finales
+    plt.imshow(vis)
     for numero, nudo in enumerate(
         nudos,
         start=1
@@ -235,11 +231,9 @@ def mostrar_nudos_finales(
             weight="bold"
         )
     plt.title(
-        f"Nudos detectados: {len(nudos)}"
+        f"{nombre_imagen} - Nudos detectados: {len(nudos)}"
     )
-    plt.axis(
-        "off"
-    )
+    plt.axis("off")
     plt.tight_layout()
     plt.show()
 # =========================================================
