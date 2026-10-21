@@ -1,40 +1,19 @@
 import numpy as np
-def calcular_tortuosidad(puntos):
 
-    puntos = np.array(puntos, dtype=float)
+def distancia_extremos(centroides, mm_por_px):
 
-    if len(puntos) < 2:
-        raise ValueError("Se necesitan al menos dos puntos")
+    if len(centroides) < 2:
+        return None
 
-    # DISTANCIA POLIGONAL
-    distancias = []
+    # Primer y último centroide
+    x1, y1 = centroides[0]
+    x2, y2 = centroides[-1]
 
-    for i in range(len(puntos) - 1):
-        d = np.linalg.norm(puntos[i + 1] - puntos[i])
-        distancias.append(d)
+    # Distancia euclídea en píxeles
+    distancia_px = ((x2 - x1)**2 + (y2 - y1)**2)**0.5
 
-    d_poligonal = np.sum(distancias)
+    # Conversión a milímetros
+    distancia_mm = distancia_px * mm_por_px
 
-    # RECTA IDEAL POR PCA
-    media = np.mean(puntos, axis=0)
-    puntos_centrados = puntos - media
+    return distancia_mm
 
-    cov = np.cov(puntos_centrados.T)
-
-    autovalores, autovectores = np.linalg.eigh(cov)
-
-    indice_mayor = np.argmax(autovalores)
-    direccion_principal = autovectores[:, indice_mayor]
-
-    # PROYECTAR LOS PUNTOS SOBRE LA DIRECCIÓN PRINCIPAL
-    proyecciones = puntos_centrados @ direccion_principal
-
-    d_lineal_pca = np.max(proyecciones) - np.min(proyecciones)
-
-    if d_lineal_pca == 0:
-        raise ValueError("No se puede calcular la distancia PCA")
-
-    # TORTUOSIDAD PCA
-    tortuosidad_pca = d_poligonal / d_lineal_pca
-
-    return tortuosidad_pca

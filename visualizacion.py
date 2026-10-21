@@ -327,69 +327,26 @@ def imprimir_resultados(resultado):
 
 
 # =========================================================
-# VISUALIZAR TORTUOSIDAD
+# VISUALIZAR linea recta
 # =========================================================
-def mostrar_tortuosidad(imagen_bgr, centroides, nombre_imagen=""):
+import cv2
 
-    puntos = np.array(centroides, dtype=float)
+def dibujar_linea_extremos(imagen, centroides, color_linea=(0, 255, 0), grosor=2):
 
-    if len(puntos) < 2:
-        print("No hay suficientes puntos para visualizar tortuosidad")
-        return
+    imagen_resultado = imagen.copy()
 
-    # ---------------------------------------------
-    # RECTA POLIGONAL ENTRE LOS CENTROIDES
-    # ---------------------------------------------
-    x = puntos[:, 0]
-    y = puntos[:, 1]
+    if len(centroides) < 2:
+        return imagen_resultado
 
-    # ---------------------------------------------
-    # RECTA IDEAL POR PCA
-    # ---------------------------------------------
-    media = np.mean(puntos, axis=0)
+    # Primer y último punto
+    punto_inicial = tuple(map(int, centroides[0]))
+    punto_final = tuple(map(int, centroides[-1]))
 
-    puntos_centrados = puntos - media
+    # Dibujar línea
+    cv2.line(imagen_resultado, punto_inicial, punto_final, color_linea, grosor)
 
-    cov = np.cov(puntos_centrados.T)
+    # Dibujar extremos
+    cv2.circle(imagen_resultado, punto_inicial, 5, (0, 0, 255), -1)  # rojo
+    cv2.circle(imagen_resultado, punto_final, 5, (255, 0, 0), -1)    # azul
 
-    autovalores, autovectores = np.linalg.eigh(cov)
-
-    direccion = autovectores[:, np.argmax(autovalores)]
-
-    # Proyectar los puntos sobre la dirección principal
-    proyecciones = puntos_centrados @ direccion
-
-    # Extremos de la recta PCA
-    punto_inicio = media + np.min(proyecciones) * direccion
-    punto_fin = media + np.max(proyecciones) * direccion
-
-    # ---------------------------------------------
-    # MOSTRAR IMAGEN
-    # ---------------------------------------------
-    imagen_rgb = cv2.cvtColor(imagen_bgr, cv2.COLOR_BGR2RGB)
-
-    plt.figure(figsize=(10, 7))
-
-    plt.imshow(imagen_rgb)
-
-    # Poligonal verde
-    plt.plot(x, y, "g-", linewidth=2, label="Distancia poligonal")
-
-    # Recta PCA roja
-    plt.plot(
-        [punto_inicio[0], punto_fin[0]],
-        [punto_inicio[1], punto_fin[1]],
-        "r--",
-        linewidth=2,
-        label="Recta ideal PCA"
-    )
-
-    # Centroides amarillos
-    plt.plot(x, y, "y+", markersize=14, mew=2)
-
-    plt.title(f"Tortuosidad - {nombre_imagen}")
-
-    plt.legend()
-    plt.axis("off")
-    plt.tight_layout()
-    plt.show()
+    return imagen_resultado

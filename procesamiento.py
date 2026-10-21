@@ -65,13 +65,17 @@ def rotar_mismo_tamanio(imagen, angulo, border_value):
     )
     return rotada, M
 
+
 def obtener_centroides(nudos):
+
     centroides = []
 
     for nudo in nudos:
         centroides.append(nudo["centroide"])
 
     return centroides
+
+
 def calcular_angulo_hotelling(mascara):
 
     # Coordenadas de todos los píxeles del hilo
