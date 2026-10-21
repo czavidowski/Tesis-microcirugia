@@ -324,3 +324,72 @@ def imprimir_resultados(resultado):
             f"centro=({x:.1f}, {y:.1f}), "
             f"candidatos={nudo['miembros']}"
         )
+
+
+# =========================================================
+# VISUALIZAR TORTUOSIDAD
+# =========================================================
+def mostrar_tortuosidad(imagen_bgr, centroides, nombre_imagen=""):
+
+    puntos = np.array(centroides, dtype=float)
+
+    if len(puntos) < 2:
+        print("No hay suficientes puntos para visualizar tortuosidad")
+        return
+
+    # ---------------------------------------------
+    # RECTA POLIGONAL ENTRE LOS CENTROIDES
+    # ---------------------------------------------
+    x = puntos[:, 0]
+    y = puntos[:, 1]
+
+    # ---------------------------------------------
+    # RECTA IDEAL POR PCA
+    # ---------------------------------------------
+    media = np.mean(puntos, axis=0)
+
+    puntos_centrados = puntos - media
+
+    cov = np.cov(puntos_centrados.T)
+
+    autovalores, autovectores = np.linalg.eigh(cov)
+
+    direccion = autovectores[:, np.argmax(autovalores)]
+
+    # Proyectar los puntos sobre la dirección principal
+    proyecciones = puntos_centrados @ direccion
+
+    # Extremos de la recta PCA
+    punto_inicio = media + np.min(proyecciones) * direccion
+    punto_fin = media + np.max(proyecciones) * direccion
+
+    # ---------------------------------------------
+    # MOSTRAR IMAGEN
+    # ---------------------------------------------
+    imagen_rgb = cv2.cvtColor(imagen_bgr, cv2.COLOR_BGR2RGB)
+
+    plt.figure(figsize=(10, 7))
+
+    plt.imshow(imagen_rgb)
+
+    # Poligonal verde
+    plt.plot(x, y, "g-", linewidth=2, label="Distancia poligonal")
+
+    # Recta PCA roja
+    plt.plot(
+        [punto_inicio[0], punto_fin[0]],
+        [punto_inicio[1], punto_fin[1]],
+        "r--",
+        linewidth=2,
+        label="Recta ideal PCA"
+    )
+
+    # Centroides amarillos
+    plt.plot(x, y, "y+", markersize=14, mew=2)
+
+    plt.title(f"Tortuosidad - {nombre_imagen}")
+
+    plt.legend()
+    plt.axis("off")
+    plt.tight_layout()
+    plt.show()

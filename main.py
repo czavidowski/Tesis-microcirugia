@@ -1,38 +1,74 @@
+
 import cv2
 from pathlib import Path
+
+import procesamiento
 from io_imagenes import obtener_imagenes
 from segmentacion import segmentar_hilo
 from deteccion_nudos import detectar_nudos
-from visualizacion import mostrar_nudos_finales
+from visualizacion import mostrar_nudos_finales, mostrar_tortuosidad
+from tortuosidad import calcular_tortuosidad
+
 # =========================================================
 # CARGAR TODAS LAS IMÁGENES
 # =========================================================
 rutas_imagenes = obtener_imagenes("imagenes")
+
 # =========================================================
 # PROCESAR CADA IMAGEN
 # =========================================================
 for ruta_imagen in rutas_imagenes:
+
     imagen = cv2.imread(ruta_imagen)
+
     if imagen is None:
         print(f"No se pudo cargar: {ruta_imagen}")
         continue
+
     # ---------------------------------------------
     # SEGMENTACIÓN
     # ---------------------------------------------
     mascara_hilo = segmentar_hilo(imagen)
+
     # ---------------------------------------------
     # DETECCIÓN DE NUDOS
     # ---------------------------------------------
     resultado = detectar_nudos(mascara_hilo)
+
     cantidad_nudos = len(resultado["nudos"])
-    print(
-        f"{ruta_imagen} -> "
-        f"{cantidad_nudos} nudos"
+
+    # ---------------------------------------------
+    # OBTENER CENTROIDES FINALES
+    # ---------------------------------------------
+    centroides = procesamiento.obtener_centroides(
+        resultado["nudos"]
     )
+
+    # Ordenar de arriba hacia abajo
+    centroides = sorted(centroides, key=lambda p: p[1])
+
+    # ---------------------------------------------
+    # CALCULAR TORTUOSIDAD
+    # ---------------------------------------------
+    if len(centroides) >= 2:
+
+        tortuosidad_extremos, tortuosidad_pca = calcular_tortuosidad(
+            centroides
+        )
+        mostrar_tortuosidad(imagen, centroides, Path(ruta_imagen).name)
+        print(f"Tortuosidad extremos: {tortuosidad_extremos:.4f}")
+        print(f"Tortuosidad PCA: {tortuosidad_pca:.4f}")
+
+    else:
+        print("No hay suficientes nudos para calcular tortuosidad")
+
     # ---------------------------------------------
     # NOMBRE DE LA IMAGEN
     # ---------------------------------------------
     nombre_imagen = Path(ruta_imagen).name
+
+    print(f"{nombre_imagen} -> {cantidad_nudos} nudos")
+
     # ---------------------------------------------
     # MOSTRAR RESULTADO FINAL
     # ---------------------------------------------
@@ -43,3 +79,14 @@ for ruta_imagen in rutas_imagenes:
         resultado["nudos"],
         nombre_imagen
     )
+
+# =========================================================
+# CALIBRACIÓN
+# =========================================================
+px_por_mm, mm_por_px = procesamiento.calibrar_imagen(
+    "escala.jpeg",
+    20
+)
+
+print(f"Píxeles por mm: {px_por_mm:.2f}")
+print(f"Milímetros por píxel: {mm_por_px:.4f}")
