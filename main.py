@@ -1,3 +1,4 @@
+
 import cv2
 from pathlib import Path
 
@@ -5,7 +6,12 @@ import procesamiento
 from io_imagenes import obtener_imagenes
 from segmentacion import segmentar_hilo
 from deteccion_nudos import detectar_nudos
-from visualizacion import mostrar_nudos_rotados, dibujar_linea_extremos
+
+from visualizacion import (
+    mostrar_nudos_rotados,
+    dibujar_linea_extremos,
+    dibujar_linea_poligonal
+)
 
 from distancia import (
     distancia_extremos,
@@ -46,7 +52,6 @@ for ruta_imagen in rutas_imagenes:
         print(f"No se pudo cargar: {ruta_imagen}")
         continue
 
-
     # =====================================================
     # 1. SEGMENTAR LA IMAGEN ORIGINAL
     # =====================================================
@@ -54,7 +59,6 @@ for ruta_imagen in rutas_imagenes:
     mascara_hilo = segmentar_hilo(
         imagen
     )
-
 
     # =====================================================
     # 2. DETECTAR NUDOS EN LA IMAGEN ORIGINAL
@@ -68,7 +72,6 @@ for ruta_imagen in rutas_imagenes:
         resultado["nudos"]
     )
 
-
     # =====================================================
     # 3. CALCULAR ORIENTACIÓN POR HOTELLING
     # =====================================================
@@ -76,7 +79,6 @@ for ruta_imagen in rutas_imagenes:
     angulo_rotacion = procesamiento.calcular_angulo_hotelling(
         mascara_hilo
     )
-
 
     # =====================================================
     # 4. ROTAR LA IMAGEN
@@ -87,7 +89,6 @@ for ruta_imagen in rutas_imagenes:
         angulo_rotacion,
         (255, 255, 255)
     )
-
 
     # =====================================================
     # 5. TRANSFORMAR LOS CENTROIDES YA DETECTADOS
@@ -108,7 +109,6 @@ for ruta_imagen in rutas_imagenes:
             centroide_rotado
         )
 
-
     # =====================================================
     # 6. DISTANCIA ENTRE PRIMER Y ÚLTIMO NUDO
     # =====================================================
@@ -119,19 +119,15 @@ for ruta_imagen in rutas_imagenes:
     )
 
     if distancia_mm is not None:
-
         print(
             f"Distancia entre extremos: "
             f"{distancia_mm:.4f} mm"
         )
-
     else:
-
         print(
             "No se pudo calcular "
             "la distancia entre extremos"
         )
-
 
     # =====================================================
     # 7. DISTANCIA POLIGONAL
@@ -143,18 +139,15 @@ for ruta_imagen in rutas_imagenes:
     )
 
     if distancia_poligonal_mm is not None:
-
         print(
             f"Distancia poligonal: "
-            f"{distancia_poligonal_mm:.2f} mm"
+            f"{distancia_poligonal_mm:.4f} mm"
         )
-
     else:
-
         print(
-            "No se detectaron exactamente 5 nudos"
+            "No se pudo calcular "
+            "la distancia poligonal"
         )
-
 
     # =====================================================
     # 8. CALCULAR TORTUOSIDAD
@@ -166,35 +159,23 @@ for ruta_imagen in rutas_imagenes:
     )
 
     if tortuosidad is not None:
-
-        print(
-            f"Tortuosidad: "
-            f"{tortuosidad:.4f}"
-        )
-
+        print(f"Tortuosidad: {tortuosidad:.4f}")
     else:
-
-        print(
-            "No se pudo calcular la tortuosidad"
-        )
-
+        print("No se pudo calcular la tortuosidad")
 
     # =====================================================
     # 9. NOMBRE DE LA IMAGEN
     # =====================================================
 
-    nombre_imagen = Path(
-        ruta_imagen
-    ).name
+    nombre_imagen = Path(ruta_imagen).name
 
     print(
         f"{nombre_imagen} -> "
         f"{cantidad_nudos} nudos"
     )
 
-
     # =====================================================
-    # 10. DIBUJAR LÍNEA SOBRE LA IMAGEN ROTADA
+    # 10. DIBUJAR LÍNEA ENTRE EXTREMOS
     # =====================================================
 
     imagen_con_linea = dibujar_linea_extremos(
@@ -202,13 +183,21 @@ for ruta_imagen in rutas_imagenes:
         centroides_rotados
     )
 
+    # =====================================================
+    # 11. DIBUJAR LÍNEA POLIGONAL
+    # =====================================================
+
+    imagen_con_lineas = dibujar_linea_poligonal(
+        imagen_con_linea,
+        centroides_rotados
+    )
 
     # =====================================================
-    # 11. MOSTRAR RESULTADO FINAL ROTADO
+    # 12. MOSTRAR RESULTADO FINAL ROTADO
     # =====================================================
 
     mostrar_nudos_rotados(
-        imagen_con_linea,
+        imagen_con_lineas,
         resultado["labels_cand"],
         resultado["candidatos"],
         resultado["nudos"],

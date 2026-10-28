@@ -356,6 +356,37 @@ def dibujar_linea_extremos(imagen, centroides, color_linea=(0, 255, 0), grosor=2
 
     return imagen_resultado
 
+
+def dibujar_linea_poligonal(imagen, centroides, color_linea=(255, 0, 0), grosor=2):
+
+    imagen_resultado = imagen.copy()
+
+    if len(centroides) != 5:
+        return imagen_resultado
+
+    # Dibujar las líneas entre puntos consecutivos
+    for i in range(len(centroides) - 1):
+
+        punto_inicial = tuple(map(int, centroides[i]))
+        punto_final = tuple(map(int, centroides[i + 1]))
+
+        cv2.line(
+            imagen_resultado,
+            punto_inicial,
+            punto_final,
+            color_linea,
+            grosor
+        )
+
+    # Dibujar los 5 centroides
+    for centroide in centroides:
+
+        punto = tuple(map(int, centroide))
+
+        cv2.circle(imagen_resultado, punto, 5, (0, 0, 255), -1)
+
+    return imagen_resultado
+
 def mostrar_nudos_rotados(
     imagen_rotada,
     labels_cand,
