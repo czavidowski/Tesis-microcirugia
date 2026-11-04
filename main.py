@@ -30,7 +30,7 @@ px_por_mm, mm_por_px = procesamiento.calibrar_imagen(
 # =========================================================
 # PROCESAR CADA IMAGEN
 # =========================================================
-
+resultados_estudiantes = {}
 for ruta_imagen in rutas_imagenes:
 
     imagen = cv2.imread(ruta_imagen)
@@ -130,7 +130,49 @@ for ruta_imagen in rutas_imagenes:
         distancia_poligonal_mm,
         distancia_mm
     )
+    # =====================================================
+    # GUARDAR RESULTADO PARA RESUMEN POR ESTUDIANTE
+    # =====================================================
 
+    ruta = Path(ruta_imagen)
+
+    estudiante = ruta.parent.name
+
+    carpeta_momento = ruta.parent.parent.name.lower()
+
+    if "inicial" in carpeta_momento:
+
+        momento = "inicial"
+
+    elif "final" in carpeta_momento:
+
+        momento = "final"
+
+    elif "extra" in carpeta_momento:
+
+        momento = "extra"
+
+    else:
+
+        momento = None
+
+    if estudiante not in resultados_estudiantes:
+        resultados_estudiantes[estudiante] = {
+            "inicial": [],
+            "final": [],
+            "extra": []
+        }
+
+    if tortuosidad is not None and momento is not None:
+        tortuosidad_pct = (
+                                  tortuosidad - 1
+                          ) * 100
+
+        resultados_estudiantes[
+            estudiante
+        ][momento].append(
+            tortuosidad_pct
+        )
 
     # =====================================================
     # 9. EQUIDISTANCIA
@@ -203,3 +245,77 @@ for ruta_imagen in rutas_imagenes:
         M,
         nombre_imagen
     )
+    # =========================================================
+    # RESUMEN POR ESTUDIANTE
+    # =========================================================
+
+    print("\n")
+    print("=" * 60)
+    print("RESUMEN POR ESTUDIANTE")
+    print("=" * 60)
+
+    for estudiante, datos in resultados_estudiantes.items():
+
+        print("\n" + "-" * 60)
+        print(f"ESTUDIANTE: {estudiante}")
+        print("-" * 60)
+
+        promedios = {}
+
+        # -----------------------------------------------------
+        # CALCULAR PROMEDIOS DE LOS MOMENTOS DISPONIBLES
+        # -----------------------------------------------------
+
+        for momento in [
+            "inicial",
+            "final",
+            "extra"
+        ]:
+
+            valores = datos[momento]
+
+            if len(valores) > 0:
+                promedio = sum(valores) / len(valores)
+
+                promedios[momento] = promedio
+
+                print(
+                    f"Tortuosidad promedio {momento}: "
+                    f"{promedio:.2f} %"
+                )
+
+        # -----------------------------------------------------
+        # COMPARACIÓN INICIAL VS FINAL
+        # -----------------------------------------------------
+
+        if (
+                "inicial" in promedios
+                and "final" in promedios
+        ):
+            mejora = (
+                    promedios["inicial"]
+                    - promedios["final"]
+            )
+
+            print(
+                f"Mejora inicial -> final: "
+                f"{mejora:.2f} puntos porcentuales"
+            )
+
+        # -----------------------------------------------------
+        # COMPARACIÓN FINAL VS EXTRA
+        # -----------------------------------------------------
+
+        if (
+                "final" in promedios
+                and "extra" in promedios
+        ):
+            cambio_extra = (
+                    promedios["final"]
+                    - promedios["extra"]
+            )
+
+            print(
+                f"Cambio final -> extra: "
+                f"{cambio_extra:.2f} puntos porcentuales"
+            )
