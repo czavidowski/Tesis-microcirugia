@@ -348,7 +348,7 @@ def dibujar_linea_extremos(imagen, centroides, color_linea=(0, 255, 0), grosor=2
     punto_final = tuple(map(int, centroides[-1]))
 
     # Dibujar línea
-    cv2.line(imagen_resultado, punto_inicial, punto_final, color_linea, grosor)
+    cv2.line(imagen_resultado, punto_inicial, punto_final, (0,0,0), 3)
 
     # Dibujar extremos
     cv2.circle(imagen_resultado, punto_inicial, 5, (0, 0, 255), -1)  # rojo
@@ -357,7 +357,7 @@ def dibujar_linea_extremos(imagen, centroides, color_linea=(0, 255, 0), grosor=2
     return imagen_resultado
 
 
-def dibujar_linea_poligonal(imagen, centroides, color_linea=(255, 0, 0), grosor=2):
+def dibujar_linea_poligonal(imagen, centroides, color_linea=(0, 0, 255), grosor=3):
 
     imagen_resultado = imagen.copy()
 
@@ -386,7 +386,6 @@ def dibujar_linea_poligonal(imagen, centroides, color_linea=(255, 0, 0), grosor=
         cv2.circle(imagen_resultado, punto, 5, (0, 0, 255), -1)
 
     return imagen_resultado
-
 def mostrar_nudos_rotados(
     imagen_rotada,
     labels_cand,
@@ -396,64 +395,192 @@ def mostrar_nudos_rotados(
     nombre_imagen=""
 ):
 
-    imagen_rgb = cv2.cvtColor(
-        imagen_rotada,
+    # =====================================================
+    # SEPARAR FOTO Y PANEL DE RESULTADOS
+    # =====================================================
+
+    ancho_panel = 600
+
+    alto_total, ancho_total = imagen_rotada.shape[:2]
+
+    ancho_foto = ancho_total - ancho_panel
+
+    # Parte izquierda = foto
+    foto_bgr = imagen_rotada[
+        :,
+        :ancho_foto
+    ]
+
+    # Parte derecha = panel
+    panel_bgr = imagen_rotada[
+        :,
+        ancho_foto:
+    ]
+
+    foto_rgb = cv2.cvtColor(
+        foto_bgr,
         cv2.COLOR_BGR2RGB
     )
 
-    alto_rotado, ancho_rotado = imagen_rotada.shape[:2]
+    panel_rgb = cv2.cvtColor(
+        panel_bgr,
+        cv2.COLOR_BGR2RGB
+    )
 
-    # Candidatos que quedaron como representantes
-    # de los nudos finales
+
+    # =====================================================
+    # DIBUJAR CONTORNOS DE LOS NUDOS
+    # =====================================================
+
     representantes = {
         nudo["rep"]
         for nudo in nudos
     }
-
-    # -----------------------------------------------------
-    # ROTAR LAS MÁSCARAS DE LOS NUDOS YA DETECTADOS
-    # -----------------------------------------------------
 
     for candidato in candidatos:
 
         if candidato["id"] not in representantes:
             continue
 
-        # Máscara del candidato en la imagen ORIGINAL
         mascara_candidato = np.where(
             labels_cand == candidato["label"],
             255,
             0
         ).astype(np.uint8)
 
-        # Llevar esa máscara a la imagen rotada
+        # Rotamos la máscara al mismo tamaño que la FOTO,
+        # no incluyendo el panel lateral
         mascara_rotada = cv2.warpAffine(
             mascara_candidato,
             M,
-            (ancho_rotado, alto_rotado),
+            (ancho_foto, alto_total),
             flags=cv2.INTER_NEAREST,
             borderValue=0
         )
 
         dibujar_contorno(
-            imagen_rgb,
+            foto_rgb,
             mascara_rotada,
             (0, 200, 0),
             3
         )
 
-    # -----------------------------------------------------
-    # MOSTRAR
-    # -----------------------------------------------------
 
-    plt.figure(
-        num=nombre_imagen,
-        figsize=(10, 7)
+    # =====================================================
+    # CALCULAR ZOOM AUTOMÁTICO SEGÚN LOS NUDOS
+    # =====================================================
+
+    xs = []
+    ys = []
+
+    for nudo in nudos:
+
+        x, y = nudo["centroide_rotado"]
+
+        xs.append(x)
+        ys.append(y)
+
+    if len(xs) > 0:
+
+        margen_x = 220
+        margen_y = 180
+
+        x_min = max(
+            0,
+            min(xs) - margen_x
+        )
+
+        x_max = min(
+            ancho_foto,
+            max(xs) + margen_x
+        )
+
+        y_min = max(
+            0,
+            min(ys) - margen_y
+        )
+
+        y_max = min(
+            alto_total,
+            max(ys) + margen_y
+        )
+
+    else:
+
+        x_min = 0
+        x_max = ancho_foto
+
+        y_min = 0
+        y_max = alto_total
+
+
+    # =====================================================
+    # RECORTAR ESPACIO VACÍO DEL PANEL
+    # =====================================================
+
+    # El panel tiene fondo aproximadamente 245.
+    # Buscamos hasta dónde realmente hay texto.
+    diferencia = np.any(
+        panel_bgr < 235,
+        axis=2
     )
 
-    plt.imshow(imagen_rgb)
+    filas_con_texto = np.where(
+        np.any(diferencia, axis=1)
+    )[0]
 
-    # Números y centroides ya transformados
+    if len(filas_con_texto) > 0:
+
+        ultima_fila = min(
+            alto_total,
+            filas_con_texto[-1] + 80
+        )
+
+        panel_rgb = panel_rgb[
+            :ultima_fila,
+            :
+        ]
+
+
+    # =====================================================
+    # CREAR FIGURA
+    # =====================================================
+
+    fig, (ax_imagen, ax_panel) = plt.subplots(
+        1,
+        2,
+        figsize=(16, 9),
+        gridspec_kw={
+            "width_ratios": [3.2, 1.4]
+        }
+    )
+
+
+    # =====================================================
+    # MOSTRAR IMAGEN CON ZOOM
+    # =====================================================
+
+    ax_imagen.imshow(
+        foto_rgb
+    )
+
+    # Aplicar zoom
+    ax_imagen.set_xlim(
+        x_min,
+        x_max
+    )
+
+    # En imágenes el eje Y crece hacia abajo
+    ax_imagen.set_ylim(
+        y_max,
+        y_min
+    )
+
+
+    # =====================================================
+    # MOSTRAR CENTROIDES Y NÚMEROS
+    # =====================================================
+
     for numero, nudo in enumerate(
         nudos,
         start=1
@@ -461,28 +588,252 @@ def mostrar_nudos_rotados(
 
         x, y = nudo["centroide_rotado"]
 
-        plt.plot(
+        ax_imagen.plot(
             x,
             y,
             "y+",
-            markersize=14,
-            mew=2
+            markersize=18,
+            mew=3
         )
 
-        plt.text(
+        ax_imagen.text(
             x,
-            y - 25,
+            y - 20,
             str(numero),
             color="yellow",
-            fontsize=14,
+            fontsize=18,
             ha="center",
             weight="bold"
         )
 
-    plt.title(
-        f"{nombre_imagen} - Nudos detectados: {len(nudos)}"
+    ax_imagen.axis(
+        "off"
     )
 
-    plt.axis("off")
+
+    # =====================================================
+    # MOSTRAR PANEL DE RESULTADOS
+    # =====================================================
+
+    ax_panel.imshow(
+        panel_rgb
+    )
+
+    ax_panel.axis(
+        "off"
+    )
+
+
+    # =====================================================
+    # TÍTULO
+    # =====================================================
+
+    fig.suptitle(
+        f"{nombre_imagen} - Nudos detectados: {len(nudos)}",
+        fontsize=18
+    )
+
     plt.tight_layout()
     plt.show()
+def dibujar_resultados(
+    imagen,
+    cantidad_nudos,
+    distancia_mm,
+    distancia_poligonal_mm,
+    tortuosidad,
+    distancia_ideal,
+    distancias_mm,
+    desviaciones,
+    px_por_mm,
+    mm_por_px
+):
+
+    # -----------------------------------------------------
+    # TORTUOSIDAD EN PORCENTAJE
+    # -----------------------------------------------------
+
+    if tortuosidad is not None:
+        tortuosidad_pct = (tortuosidad - 1) * 100
+    else:
+        tortuosidad_pct = None
+
+
+    # -----------------------------------------------------
+    # CREAR PANEL LATERAL
+    # -----------------------------------------------------
+
+    alto, ancho = imagen.shape[:2]
+
+    ancho_panel = 600
+
+    panel = np.ones(
+        (alto, ancho_panel, 3),
+        dtype=np.uint8
+    ) * 245
+
+
+    # -----------------------------------------------------
+    # ARMAR TEXTOS
+    # -----------------------------------------------------
+
+    lineas = []
+
+    lineas.append(
+        f"Nudos detectados: {cantidad_nudos}"
+    )
+
+    lineas.append("")
+
+    lineas.append(
+        f"Calibracion:"
+    )
+
+    lineas.append(
+        f"{px_por_mm:.2f} px/mm"
+    )
+
+    lineas.append(
+        f"{mm_por_px:.4f} mm/px"
+    )
+
+    lineas.append("")
+
+    if distancia_mm is not None:
+
+        lineas.append(
+            f"Distancia entre extremos:"
+        )
+
+        lineas.append(
+            f"{distancia_mm:.4f} mm"
+        )
+
+
+    lineas.append("")
+
+
+    if distancia_poligonal_mm is not None:
+
+        lineas.append(
+            f"Distancia poligonal:"
+        )
+
+        lineas.append(
+            f"{distancia_poligonal_mm:.4f} mm"
+        )
+
+
+    lineas.append("")
+
+
+    if tortuosidad_pct is not None:
+
+        lineas.append(
+            f"Tortuosidad:"
+        )
+
+        lineas.append(
+            f"{tortuosidad_pct:.2f} %"
+        )
+
+
+    lineas.append("")
+
+
+    if distancia_ideal is not None:
+
+        lineas.append(
+            f"Distancia ideal entre puntos:"
+        )
+
+        lineas.append(
+            f"{distancia_ideal:.4f} mm"
+        )
+
+
+    lineas.append("")
+
+
+    # -----------------------------------------------------
+    # DISTANCIAS ENTRE NUDOS
+    # -----------------------------------------------------
+
+    if desviaciones is not None:
+
+        lineas.append(
+            "Separacion entre puntos:"
+        )
+
+        lineas.append("")
+
+        for i, desviacion in enumerate(
+            desviaciones
+        ):
+
+            distancia = distancias_mm[i]
+
+            if desviacion > 0:
+
+                texto = (
+                    f"P{i+1}-P{i+2}: "
+                    f"{distancia:.3f} mm "
+                    f"(+{desviacion:.3f})"
+                )
+
+            elif desviacion < 0:
+
+                texto = (
+                    f"P{i+1}-P{i+2}: "
+                    f"{distancia:.3f} mm "
+                    f"(-{abs(desviacion):.3f})"
+                )
+
+            else:
+
+                texto = (
+                    f"P{i+1}-P{i+2}: "
+                    f"{distancia:.3f} mm "
+                    f"(ideal)"
+                )
+
+            lineas.append(texto)
+
+
+    # -----------------------------------------------------
+    # DIBUJAR TEXTO
+    # -----------------------------------------------------
+
+    x = 35
+    y = 60
+
+    separacion = 42
+
+    for texto in lineas:
+
+        if texto == "":
+            y += 20
+            continue
+
+        cv2.putText(
+            panel,
+            texto,
+            (x, y),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.85,
+            (30, 30, 30),
+            2,
+            cv2.LINE_AA
+        )
+
+        y += separacion
+
+
+    # -----------------------------------------------------
+    # UNIR PANEL + IMAGEN
+    # -----------------------------------------------------
+
+    imagen_final = np.hstack(
+        (imagen, panel)
+    )
+
+    return imagen_final

@@ -50,3 +50,24 @@ def calcular_tortuosidad(distancia_poligonal_mm, distancia_extremos_mm):
     tortuosidad = distancia_poligonal_mm / distancia_extremos_mm
 
     return tortuosidad
+
+def desviacion_equidistancia(centroides, mm_por_px):
+    if len(centroides) != 5:
+        return None, None, None
+    distancias_mm = []
+    for i in range(len(centroides) - 1):
+        x1, y1 = centroides[i]
+        x2, y2 = centroides[i + 1]
+        distancia_px = (
+            (x2 - x1) ** 2 +
+            (y2 - y1) ** 2
+        ) ** 0.5
+        distancia_mm = distancia_px * mm_por_px
+        distancias_mm.append(distancia_mm)
+    poligonal_total = sum(distancias_mm)
+    distancia_ideal = poligonal_total / 4
+    desviaciones = [
+        distancia - distancia_ideal
+        for distancia in distancias_mm
+    ]
+    return distancias_mm, distancia_ideal, desviaciones

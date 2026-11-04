@@ -14,13 +14,11 @@ def obtener_imagenes(carpeta="imagenes"):
         ".png"
     }
     rutas = []
-    for archivo in carpeta.iterdir():
+    for archivo in carpeta.rglob("*"):
         if (
             archivo.is_file()
             and archivo.suffix.lower() in extensiones_validas
         ):
-            rutas.append(
-                str(archivo)
-            )
+            rutas.append(str(archivo))
     rutas.sort()
     return rutas
